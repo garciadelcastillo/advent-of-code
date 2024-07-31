@@ -211,9 +211,9 @@ const escapeString = str =>
 
 const escaped = lines.map((line, i) => {
     const esc = escapeString(line);
-    console.log(i);
-    console.log('Bef: ', line);
-    console.log('Aft: ', esc);
+    // console.log(i);
+    // console.log('Bef: ', line);
+    // console.log('Aft: ', esc);
     return esc
   });
 
