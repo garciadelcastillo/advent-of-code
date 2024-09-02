@@ -66,18 +66,6 @@ console.log(`Number of lines loaded: `, lines.length);
 
 // Parse input
 const parseAunt = (line) => {
-  // const name = line.split(":")[0];
-  // const props = line.split(":")[1]
-  //   .trim()
-  //   .split(",")
-  //   .map(p => {
-  //     return parseInt(p.trim().split(" ")[1]);
-  //   });
-  // return {
-  //   name,
-  //   props
-  // }
-
   const i = line.indexOf(":");
   const name = line.slice(0, i);
   const id = parseInt(name.split(" ")[1]);
