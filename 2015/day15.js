@@ -200,6 +200,52 @@ recipe.forEach((quant, i) => {
   console.log(` ${ingredients[i].name}: ${quant} teaspoons`);
 });
 // console.log(recipe);
+console.log();
 
-// [ 4, 46, 40, 10 ]  ->  1766400
-// [ 4, 46, 50, 0 ]  ->  0
+
+
+
+
+
+
+// --- Part Two ---
+
+// Your cookie recipe becomes wildly popular! Someone asks if you can make another recipe that has exactly 500 calories per cookie (so they can use it as a meal replacement). Keep the rest of your award-winning process the same (100 teaspoons, same ingredients, same scoring system).
+
+// For example, given the ingredients above, if you had instead selected 40 teaspoons of butterscotch and 60 teaspoons of cinnamon (which still adds to 100), the total calorie count would be 40*8 + 60*3 = 500. The total score would go down, though: only 57600000, the best you can do in such trying circumstances.
+
+// Given the ingredients in your kitchen and their properties, what is the total score of the highest-scoring cookie you can make with a calorie total of 500?
+
+
+const computeCalories = (ingredients, quantities) => {
+  let caloriesId = ingredients[0].props.length - 1;  
+  let calories = 0;
+  for (let j = 0; j < ingredients.length; j++) {
+    calories += quantities[j] * ingredients[j].props[caloriesId];
+  }
+  calories = Math.max(calories, 0);
+  return calories; 
+}
+
+
+const targetCalories = 500;
+maxScore = 0;
+recipe = null;
+
+permutations.forEach(quants => {
+  const calories = computeCalories(ingredients, quants);
+  if (calories === targetCalories) {
+    const score = computeScore(ingredients, quants);
+    if (score > maxScore) {
+      maxScore = score;
+      recipe = quants; 
+    }   
+  }
+});
+
+
+console.log(`Recipe with exactly ${targetCalories} calories is:`);
+recipe.forEach((quant, i) => {
+  console.log(` ${ingredients[i].name}: ${quant} teaspoons`);
+});
+console.log("Recipe score is:", maxScore);
