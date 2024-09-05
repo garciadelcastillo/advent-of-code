@@ -85,7 +85,7 @@ let presents = 0;
 
 // Alternative approach: https://www.reddit.com/r/adventofcode/comments/3xjpp2/day_20_solutions/
 // Precompute all values in an array, avoiding division checks
-const houses = Array.from({length: target_presents}).fill(0);
+let houses = Array.from({length: target_presents}).fill(0);
 for (let i = 1; i < houses.length; i++) 
 {
   const inc = 10 * i;
@@ -105,6 +105,50 @@ for (let i = 1; i < houses.length; i++) {
 }
 console.log(`First house num with presents > ${target_presents}:`, houseNum);
 console.log("Present count:", presents);
+console.log();
 // took a few seconds
 
 
+
+
+
+// --- Part Two ---
+
+// The Elves decide they don't want to visit an infinite number of houses. Instead, each Elf will stop after delivering presents to 50 houses. To make up for it, they decide to deliver presents equal to eleven times their number at each house.
+
+// With these changes, what is the new lowest house number of the house to get at least as many presents as the number in your puzzle input?
+
+// Your puzzle input is still 34000000.
+
+const max_visits = 50;
+
+const houses_bis = Array.from({length: target_presents}).fill(0);
+for (let i = 1; i < houses_bis.length; i++) 
+{
+  const inc = 11 * i;
+
+  // let id;
+  // for (let j = 0; j < max_visits; j++) {
+  //   id = i * (j + 1);
+  //   houses_bis[id] += inc;
+  // }
+
+  let visits = 0;
+  for (let j = i; j < houses_bis.length; j += i) {
+    houses_bis[j] += inc;
+    visits++;
+    if (visits >= max_visits) break;     
+  }
+}
+console.log(`Done precomputing presents for ${houses_bis.length} houses`);
+
+for (let i = 1; i < houses_bis.length; i++) {
+  if (houses_bis[i] > target_presents) {
+    houseNum = i;
+    presents = houses_bis[i];
+    break;
+  }
+}
+console.log(`First house num with presents > ${target_presents}:`, houseNum);
+console.log("Present count:", presents);
+// took a few seconds
