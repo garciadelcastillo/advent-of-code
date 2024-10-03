@@ -5,8 +5,11 @@ import path, {
   parse
 } from 'path';
 
+const LOG = false;
+const print = (msg) => {
+  if (LOG) console.log(msg);
+};
 
-const print = console.log;
 
 // // GLOBAL VARS
 // const input_filename = 'day19_input.txt'
@@ -149,8 +152,147 @@ const print = console.log;
 
 
 
+//// QUICK TEST WITH RANDOM SPELLING
+
+// import * as game from './day22_funcs.js';
+
+// const initialState = {
+//   turn: 0,
+//   player_hits: 50,
+//   player_mana: 500,
+//   player_armor: 0,
+//   boss_hits: 58,
+//   boss_damage: 9,
+//   effects: [],
+//   effect_times: [] 
+// };
+// print(initialState);
+
+// const state_history = [initialState];
+// const spell_history = [];
+// const winner_games = [];
+
+// let winner = null;
+// const applyTurn = () => {
+//   const state = game.cloneState(state_history[state_history.length - 1]);
+  
+//   // PLAYER
+//   print('PLAYER');
+//   state.turn += 0.5;
+
+//   // Run effects
+//   game.runEffects(state);
+
+//   // Player action: cast spells
+//   const castSpell = game.castSpellRandom(state);
+//   if (castSpell === -1) {
+//     print("NO SPELL TO CAST");
+//     winner = 'boss'
+//     return false;
+//   }
+//   spell_history.push(castSpell);
+
+//   print(state);
+//   print();
+
+//   // Check game
+//   if (game.hasWinner(state)) {
+//     winner = game.winner(state);
+//     return false;
+//   }
+
+  
+//   // BOSS
+//   print("BOSS");
+//   state.turn += 0.5;
+
+//   // Run effects
+//   game.runEffects(state);
+
+//   // Boss action: hit
+//   game.bossHits(state);
+  
+//   // Check game
+//   if (game.hasWinner(state)) {
+//     winner = game.winner(state);
+//     return false;
+//   }
+  
+  
+//   // If game is still on, add state and move on
+//   print(state);
+//   print();
+//   state_history.push(state);
+
+//   return true;
+// }
+
+
+// let i = 0;
+// while (i++ < 100 && winner == null) {
+//   // print(`Turn:`, i);
+//   applyTurn()
+// }
+
+// console.log("WINNER: " + winner);
+// console.log(spell_history);
+
+
+
+
+
+
+
+
+
+/*
+A turn basically is:
+- Only decision-branching moment: Player plays (whatever available) spells. Game branches into all possible available spells.
+- Everything now is deterministic: 
+  - Spell may have an immediate effect. Victory can be checked.
+  - Boss turn begins: effects take place. Victory can be checked.
+  - Boss hits. Victory can be checked. 
+  - Player turns begins: effects take place. Victory can be checked.
+*/
 
 import * as game from './day22_funcs.js';
+
+// // Sample 1 from AoC
+// const initialState1 = {
+//   turn: 0,
+//   player_hits: 10,
+//   player_mana: 250,
+//   player_armor: 0,
+//   boss_hits: 13,
+//   boss_damage: 8,
+//   effects: [],
+//   effect_times: [],
+//   history: [],
+// };
+
+
+
+// Sample 2 from AoC
+const initialState2 = {
+  turn: 0,
+  player_hits: 10,
+  player_mana: 250,
+  player_armor: 0,
+  boss_hits: 14,
+  boss_damage: 8,
+  effects: [],
+  effect_times: [],
+  history: [],
+};
+const history2 = [ 4, 2, 1, 3, 0 ];
+
+game.simulateGame(initialState2, history2);
+console.log();
+console.log("Sample game 2 mana cost:", game.computeGameManaSpent({history: history2}));
+console.log();
+console.log();
+console.log();
+
 
 const initialState = {
   turn: 0,
@@ -160,78 +302,84 @@ const initialState = {
   boss_hits: 58,
   boss_damage: 9,
   effects: [],
-  effect_times: [] 
+  effect_times: [],
+  history: [],
 };
-console.log(initialState);
 
 
-const state_history = [initialState];
-let effect_history = [];
-const winner_games = [];
 
-let winner = null;
-const applyTurn = () => {
-  const state = game.cloneState(state_history[state_history.length - 1]);
-  
-  // PLAYER
-  console.log('PLAYER');
-  state.turn += 0.5;
+const pending_states = [initialState];
+let winning_states = [];
+let lost_games = 0;
 
-  // Run effects
-  game.runEffects(state);
+const CHECK_EVERY = 1000000;
+let best_game, min_mana = Number.MAX_VALUE;
 
-  // Player action: cast spells
-  const castSpell = game.castSpellRandom(state);
-  if (castSpell === -1) {
-    console.log("NO SPELL TO CAST");
-    winner = 'boss'
-    return false;
+const distill_best_game = () => {
+  console.log("Parsing winning gmes:", winning_states.length);
+  for (let i = 0; i < winning_states.length; i++) {
+    const w = winning_states[i];
+    const m = game.computeGameManaSpent(w);
+    if (m < min_mana) {
+      min_mana = m;
+      best_game = w;
+    }
   }
-
-  console.log(state);
+  winning_states = [];
+  console.log("Best game so far:", best_game.history);
+  console.log("Cheapest game so far:", min_mana);
+  console.log("Pending branches to explore:", pending_states.length);
+  console.log("Most recent:", pending_states[pending_states.length - 1].history);
   console.log();
-
-  // Check game
-  if (game.hasWinner(state)) {
-    winner = game.winner(state);
-    return false;
-  }
-
-  
-  // BOSS
-  console.log("BOSS");
-  state.turn += 0.5;
-
-  // Run effects
-  game.runEffects(state);
-
-  // Boss action: hit
-  game.bossHits(state);
-  
-  // Check game
-  if (game.hasWinner(state)) {
-    winner = game.winner(state);
-    return false;
-  }
-  
-  
-  // If game is still on, add state and move on
-  console.log(state);
-  console.log();
-  state_history.push(state);
-
-  return true;
 }
 
-// for (let i = 0; i < 10; i++) {
-//   applyTurn();
-// }
 
-let i = 0;
-while (i++ < 100 && winner == null) {
-  // console.log(`Turn:`, i);
-  applyTurn()
+let it = 0
+while (pending_states.length > 0 
+  // && it++ < 100000
+  ) {
+  const last_state = pending_states.pop();
+
+  const possible_spells = game.computePossibleSpells(last_state);
+  // console.log(possible_spells);
+
+  possible_spells.forEach(spell_id => {
+    const state = game.cloneState(last_state);
+    game.castSpell(state, spell_id);
+    // console.log(state);
+    const result = game.simulateTurn(state);
+    // console.log("Simulation result:", result);
+    switch(result) {
+      case 2: 
+        // Boss wins: end this branch
+        lost_games++;
+        break;
+      case 1:
+        // Player wins
+        winning_states.push(state);
+        break;
+      case 0: 
+        // No winner yet
+        pending_states.push(state);
+        break;
+    }
+  });
+
+  if (winning_states.length > CHECK_EVERY) distill_best_game();
 }
 
-console.log("WINNER: " + winner);
+console.log("Computed iterations:", it);
+console.log("Pending states:", pending_states.length);
+console.log("Winning games:", winning_states.length);
+console.log("Lost games:", lost_games);
+const random_winning_state = winning_states[Math.floor(winning_states.length / 2)];
+console.log("Random won game:", random_winning_state);
+console.log("Random won mana cost:", game.computeGameManaSpent(random_winning_state));
+console.log();
 
+
+console.log("Best winning game:", best_game);
+console.log("Best game mana spent:", min_mana);
+
+// Never actually ran the whole thing, was taking forever! 
+// Cheapest game found was 1269 mana for [3, 4, 2, 3, 4, 1, 3, 0, 0]

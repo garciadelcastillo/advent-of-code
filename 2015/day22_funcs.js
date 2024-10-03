@@ -1,11 +1,17 @@
+export let LOG = false;
+const print = (msg) => {
+  if (LOG) console.log(msg);
+};
+
+
 const spells = [
   {
     id: 0,
     name: 'missile',
     cost: 53,
-    cast: (state) => { 
+    cast: (state) => {
       state.player_mana -= 53;
-      console.log("Missile cast: boss_hits -= 4");
+      print("Missile cast: boss_hits -= 4");
       state.boss_hits -= 4;
     }
   },
@@ -15,7 +21,7 @@ const spells = [
     cost: 73,
     cast: (state) => { 
       state.player_mana -= 73;
-      console.log("Drain cast: boss_hits -= 2, player_hits += 2");
+      print("Drain cast: boss_hits -= 2, player_hits += 2");
       state.boss_hits -= 2; 
       state.player_hits += 2; 
     }
@@ -28,13 +34,16 @@ const spells = [
       state.player_mana -= 113;
       state.effects.push(2); 
       state.effect_times.push(6); 
-      console.log("Shield cast: player_armor += 7");
+      print("Shield cast: player_armor += 7");
       state.player_armor += 7;
     },
     effect: (state) => { },
-    wane: (state) => { 
-      console.log("Shield is gone: player_armor -= 7");
+    wane: (state, log=false) => { 
+      if (log) console.log("Shield is gone: player_armor -= 7");
       state.player_armor -= 7; 
+    },
+    log: (timer) => {
+      console.log(`Shield's timer is now ${timer}`);
     }
   },
   {
@@ -47,11 +56,14 @@ const spells = [
       state.effect_times.push(6); 
     },
     effect: (state) => {
-      console.log("Poison effect: boss -= 3");
+      print("Poison effect: boss -= 3");
       state.boss_hits -= 3;
      },
-    wane: (state) => { 
-      console.log("Poison is gone");
+     wane: (state, log=false) => { 
+      if (log) console.log("Poison is gone");
+    },
+    log: (timer) => {
+      console.log(`Poison deals 3 damage; it's timer is now ${timer}`);
     }
   },
   {
@@ -64,24 +76,28 @@ const spells = [
       state.effect_times.push(5); 
     },
     effect: (state) => {
-      console.log("Recharge effect: player_mana += 101");
+      print("Recharge effect: player_mana += 101");
       state.player_mana += 101;
      },
-    wane: (state) => {
-      console.log("Recharge is gone");
-     }
+     wane: (state, log=false) => { 
+      if (log) console.log("Recharge wears off.");
+    },
+    log: (timer) => {
+      console.log(`Recharge provides 101 mana; it's timer is now ${timer}`);
+    }
   }
 ]
 
-export function runEffects(state) {
+export function runEffects(state, log=false) {
   for (let i = 0; i < state.effects.length; i++) {
     const effect_id = state.effects[i];
     spells[effect_id].effect(state);
     
-    const effect_time = state.effect_times[i];
+    // const effect_time = state.effect_times[i];
     state.effect_times[i]--;
-    if (effect_time == 0) {
-      spells[effect_id].wane(state);
+    if (log) spells[effect_id].log(state.effect_times[i]);
+    if (state.effect_times[i] == 0) {
+      spells[effect_id].wane(state, log);
       state.effects.splice(i, 1);
       state.effect_times.splice(i, 1);
       i--;
@@ -104,29 +120,128 @@ export function castSpellRandom(state) {
     i--;
   }
   if (i == -1) {
-    // console.log("CANNOT CAST ANY SPELL");
+    // print("CANNOT CAST ANY SPELL");
     return i;
   }
   const randomSpellId = randomSpells[i];
   const spell = spells[randomSpellId];
   
-  console.log("Casting Random Spell:", spell.name, spell.cost);
+  print("Casting Random Spell:", spell.name, spell.cost);
   spell.cast(state);
-  // console.log("Mana left:", state.player_mana);
+  // print("Mana left:", state.player_mana);
 
   return spell.id;
 }
+
+
+
+export function computePossibleSpells(state) {
+  // No duplicate effects
+  // No effects that would take your mana < 0
+
+  const valid = [];
+
+  for (let i = 0; i < spells.length; i++) {
+    if (!state.effects.includes(i) &&
+      state.player_mana - spells[i].cost >= 0) {
+        valid.push(i);
+      }
+  }
+
+  return valid;
+}
+
+export function castSpell(state, spell_id, log=false) {
+  state.turn++;
+  if (log) console.log(`Player casts ${spells[spell_id].name.toUpperCase()}.\n`);
+  spells[spell_id].cast(state);
+  state.history.push(spell_id);
+}
+
+/*
+A turn basically is:
+- Only decision-branching moment: Player plays (whatever available) spells. Game branches into all possible available spells.
+- Everything now is deterministic: 
+  - Spell may have an immediate effect. Victory can be checked.
+  - Boss turn begins: effects take place. Victory can be checked.
+  - Boss hits. Victory can be checked. 
+  - Player turns begins: effects take place. Victory can be checked.
+*/
+
+export function simulateTurn(state, log=false) {
+  // Check game after cast spell
+  if (hasWinner(state)) return hasWinner(state);
+
+  // Boss turn begins: effects
+  if (log) {
+    console.log('-- Boss turn --');
+  console.log(`- Player has ${state.player_hits} hit points, ${state.player_armor} armor, ${state.player_mana} mana`);
+  console.log(`- Boss has ${state.boss_hits} hit points.`);
+  }
+  runEffects(state, log);
+  if (hasWinner(state)) return hasWinner(state);
+
+  // Boss turn: hits
+  bossHits(state, log);
+  if (hasWinner(state)) return hasWinner(state);
+
+  if (log) {
+    console.log("-- Player turn --");
+    console.log(`- Player has ${state.player_hits} hit points, ${state.player_armor} armor, ${state.player_mana} mana`);
+    console.log(`- Boss has ${state.boss_hits} hit points.`);
+  }
+
+  // Player turn: effects
+  runEffects(state, log);
+  if (hasWinner(state)) return hasWinner(state);
+
+  return 0;
+}
+
+export function simulateGame(initial_state, spell_history) {
+  // console.log("STARTING GAME SIMULATION");
+  // console.log(initial_state);
+
+  const state = cloneState(initial_state);
+  console.log("-- Player turn --");
+  console.log(`- Player has ${state.player_hits} hit points, ${state.player_armor} armor, ${state.player_mana} mana`);
+  console.log(`- Boss has ${state.boss_hits} hit points.`);
+
+
+  spell_history.forEach(si => {
+    // console.log("CASTING SPELL:", spells[si].name);
+    castSpell(state, si, true);
+    simulateTurn(state, true);
+    // console.log(state);
+  });
+
+}
+
+
+export function computeGameManaSpent(state) {
+  return state.history.reduce((acc, val) => acc + spells[val].cost, 0);
+}
+
+
+
+
+
+
+
+
+
 
 export function playerHits (state) {
   state.boss_hits -= 5;
 }
 
-export function bossHits(state) {
+export function bossHits(state, log=false) {
   const damage = Math.max(
     state.boss_damage - state.player_armor,
     1)
   state.player_hits -= damage;
-  console.log("Boss hit: player_hits -= " + damage);
+  // print("Boss hit: player_hits -= " + damage);
+  if (log) console.log(`Boss attacks for ${damage} damage!\n`);
 }
 
 export function hasWinner(state) {
@@ -151,6 +266,7 @@ export function cloneState(state) {
   const clone = {...state};
   clone.effects = [...state.effects];
   clone.effect_times = [...state.effect_times];
+  clone.history = [...state.history];
   return clone; 
 }
 
@@ -169,4 +285,12 @@ function shuffle(array) {
     [array[currentIndex], array[randomIndex]] = [
       array[randomIndex], array[currentIndex]];
   }
+}
+
+function range(start, end, step = 1) {
+  const vals = [];
+  for (let i = start; i < end; i += step) {
+    vals.push(i);
+  }
+  return vals;
 }
