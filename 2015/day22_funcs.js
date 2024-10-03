@@ -168,16 +168,18 @@ A turn basically is:
   - Player turns begins: effects take place. Victory can be checked.
 */
 
-export function simulateTurn(state, log=false) {
+export function simulateTurn(state, log=false, lose_one=false) {
   // Check game after cast spell
   if (hasWinner(state)) return hasWinner(state);
 
   // Boss turn begins: effects
   if (log) {
     console.log('-- Boss turn --');
-  console.log(`- Player has ${state.player_hits} hit points, ${state.player_armor} armor, ${state.player_mana} mana`);
-  console.log(`- Boss has ${state.boss_hits} hit points.`);
+    console.log(`- Player has ${state.player_hits} hit points, ${state.player_armor} armor, ${state.player_mana} mana`);
+    console.log(`- Boss has ${state.boss_hits} hit points.`);
   }
+  
+  if (lose_one) playerLoses(state, 1);
   runEffects(state, log);
   if (hasWinner(state)) return hasWinner(state);
 
@@ -192,6 +194,7 @@ export function simulateTurn(state, log=false) {
   }
 
   // Player turn: effects
+  if (lose_one) playerLoses(state, 1);
   runEffects(state, log);
   if (hasWinner(state)) return hasWinner(state);
 
@@ -242,6 +245,14 @@ export function bossHits(state, log=false) {
   state.player_hits -= damage;
   // print("Boss hit: player_hits -= " + damage);
   if (log) console.log(`Boss attacks for ${damage} damage!\n`);
+}
+
+function playerLoses(state, amount) {
+  state.player_hits -= amount;
+} 
+
+function bossLoses(state, amount) {
+  state.boss_hits -= amount;
 }
 
 export function hasWinner(state) {
