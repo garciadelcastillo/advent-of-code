@@ -263,7 +263,7 @@ import * as game from './day22_funcs.js';
 // Uses most optimal mana cost to optimize tree search:
 // it resolves in a couple seconds! 😅
 
-const initialState = {
+let initialState = {
   turn: 0,
   player_hits: 50,
   player_mana: 500,
@@ -278,7 +278,7 @@ const initialState = {
 
 
 
-const pending_states = [initialState];
+let pending_states = [initialState];
 let min_mana = Number.MAX_VALUE;
 let best_game;
 let it = 0
@@ -313,6 +313,7 @@ while (pending_states.length > 0
   it++;
 }
 
+console.log("PART I");
 console.log("Computed iterations:", it);
 console.log("Pending states:", pending_states.length);
 console.log("Best winning game:", best_game);
@@ -320,3 +321,73 @@ console.log("Best game mana spent:", min_mana);
 console.log();
 
 // Cheapest game found was 1269 mana for [3, 4, 2, 3, 4, 1, 3, 0, 0]
+
+
+
+
+// --- Part Two ---
+
+// On the next run through the game, you increase the difficulty to hard.
+
+// At the start of each player turn (before any other effects apply), you lose 1 hit point. If this brings you to or below 0 hit points, you lose.
+
+// With the same starting stats for you and the boss, what is the least amount of mana you can spend and still win the fight?
+
+
+
+
+initialState = {
+  turn: 0,
+  player_hits: 50,
+  player_mana: 500,
+  player_armor: 0,
+  boss_hits: 58,
+  boss_damage: 9,
+  spent_mana: 0,
+  effects: [],
+  effect_times: [],
+  history: [],
+};
+
+
+
+pending_states = [initialState];
+min_mana = Number.MAX_VALUE;
+best_game = undefined;
+it = 0
+while (pending_states.length > 0) {
+  const last_state = pending_states.pop();
+
+  const possible_spells = game.computePossibleSpells(last_state, min_mana);
+
+  possible_spells.forEach(spell_id => {
+    const state = game.cloneState(last_state);
+    game.castSpell(state, spell_id);
+    const result = game.simulateTurn(state, false, true);
+    switch(result) {
+      case 2: 
+        // Boss wins: end this branch
+        break;
+      case 1:
+        // Player wins
+        if (state.spent_mana < min_mana) {
+          best_game = state;
+          min_mana = state.spent_mana;
+        }
+        break;
+      case 0: 
+        // No winner yet
+        pending_states.push(state);
+        break;
+    }
+  });
+
+  it++;
+}
+
+console.log("PART II");
+console.log("Computed iterations:", it);
+console.log("Pending states:", pending_states.length);
+console.log("Best winning game:", best_game);
+console.log("Best game mana spent:", min_mana);
+console.log();
