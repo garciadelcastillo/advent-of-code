@@ -11,6 +11,7 @@ const spells = [
     cost: 53,
     cast: (state) => {
       state.player_mana -= 53;
+      state.spent_mana += 53;
       print("Missile cast: boss_hits -= 4");
       state.boss_hits -= 4;
     }
@@ -21,6 +22,7 @@ const spells = [
     cost: 73,
     cast: (state) => { 
       state.player_mana -= 73;
+      state.spent_mana += 73;
       print("Drain cast: boss_hits -= 2, player_hits += 2");
       state.boss_hits -= 2; 
       state.player_hits += 2; 
@@ -32,6 +34,7 @@ const spells = [
     cost: 113,
     cast: (state) => { 
       state.player_mana -= 113;
+      state.spent_mana += 113;
       state.effects.push(2); 
       state.effect_times.push(6); 
       print("Shield cast: player_armor += 7");
@@ -52,6 +55,7 @@ const spells = [
     cost: 173,
     cast: (state) => {
       state.player_mana -= 173;
+      state.spent_mana += 173;
       state.effects.push(3); 
       state.effect_times.push(6); 
     },
@@ -72,6 +76,7 @@ const spells = [
     cost: 229,
     cast: (state) => {
       state.player_mana -= 229;
+      state.spent_mana += 229;
       state.effects.push(4); 
       state.effect_times.push(5); 
     },
@@ -135,15 +140,17 @@ export function castSpellRandom(state) {
 
 
 
-export function computePossibleSpells(state) {
+export function computePossibleSpells(state, bestMana = Number.MAX_VALUE) {
   // No duplicate effects
   // No effects that would take your mana < 0
+  // No spent mana that would make it more costly
 
   const valid = [];
 
   for (let i = 0; i < spells.length; i++) {
     if (!state.effects.includes(i) &&
-      state.player_mana - spells[i].cost >= 0) {
+      state.player_mana - spells[i].cost >= 0 && 
+      state.spent_mana + spells[i].cost < bestMana) {
         valid.push(i);
       }
   }
